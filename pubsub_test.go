@@ -23,6 +23,52 @@ func TestPubsubNoblock(t *testing.T) {
 	quit <- 1
 }
 
+func TestUnsub(t *testing.T) {
+	c1 := make(chan interface{})
+	c2 := make(chan interface{})
+	ps := New()
+
+	assert.Equal(t, len(ps.channels), 0)
+	ps.Subscribe("sub", nil)
+	assert.Equal(t, len(ps.channels), 0)
+
+	ps.Subscribe("sub", c1)
+	ps.Subscribe("sub", c2)
+
+	assert.Equal(t, len(ps.channels), 1)
+	assert.Equal(t, len(ps.channels["sub"]), 2)
+
+	ps.Unsubscribe("sub", c1)
+	assert.Equal(t, len(ps.channels["sub"]), 1)
+	ps.Subscribe("sub1", c1)
+	assert.Equal(t, len(ps.channels["sub"]), 1)
+	assert.Equal(t, len(ps.channels["sub1"]), 1)
+	ps.Unsubscribe("sub", c2)
+	ps.Unsubscribe("sub1", c1)
+
+	assert.Equal(t, len(ps.channels), 0)
+
+	assert.Equal(t, len(ps.patterns), 0)
+	ps.PSubscribe("sub*", nil)
+	assert.Equal(t, len(ps.patterns), 0)
+
+	ps.PSubscribe("sub*", c1)
+	ps.PSubscribe("sub*", c2)
+
+	assert.Equal(t, len(ps.patterns), 1)
+	assert.Equal(t, len(ps.patterns["sub*"]), 2)
+
+	ps.PUnsubscribe("sub*", c1)
+	assert.Equal(t, len(ps.patterns["sub*"]), 1)
+	ps.PSubscribe("sub1*", c1)
+	assert.Equal(t, len(ps.patterns["sub*"]), 1)
+	assert.Equal(t, len(ps.patterns["sub1*"]), 1)
+	ps.PUnsubscribe("sub*", c2)
+	ps.PUnsubscribe("sub1*", c1)
+
+	assert.Equal(t, len(ps.patterns), 0)
+}
+
 func TestPubsub(t *testing.T) {
 	quit := make(chan int)
 	count := 0
