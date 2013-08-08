@@ -34,6 +34,7 @@ func TestUnsub(t *testing.T) {
 
 	ps.Subscribe("sub", c1)
 	ps.Subscribe("sub", c2)
+	ps.Subscribe("sub", c2)
 
 	assert.Equal(t, len(ps.channels), 1)
 	assert.Equal(t, len(ps.channels["sub"]), 2)
@@ -53,6 +54,7 @@ func TestUnsub(t *testing.T) {
 	assert.Equal(t, len(ps.patterns), 0)
 
 	ps.PSubscribe("sub*", c1)
+	ps.PSubscribe("sub*", c2)
 	ps.PSubscribe("sub*", c2)
 
 	assert.Equal(t, len(ps.patterns), 1)

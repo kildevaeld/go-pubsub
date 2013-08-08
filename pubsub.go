@@ -5,10 +5,12 @@ package pubsub
 
 import (
 	"path/filepath"
+	"sync"
 )
 
 // Pubsub implement the Publish/Subscribe messaging paradigm.
 type Pubsub struct {
+	locker   sync.RWMutex
 	channels map[string][]chan interface{}
 	patterns map[string][]chan interface{}
 }
@@ -26,6 +28,8 @@ func (p *Pubsub) Subscribe(name string, c chan interface{}) {
 	if c == nil {
 		return
 	}
+	p.locker.Lock()
+	defer p.locker.Unlock()
 	chans, ok := p.channels[name]
 	if !ok {
 		chans = []chan interface{}{c}
@@ -45,6 +49,8 @@ func (p *Pubsub) Unsubscribe(name string, c chan interface{}) {
 	if c == nil {
 		return
 	}
+	p.locker.Lock()
+	defer p.locker.Unlock()
 	chans, ok := p.channels[name]
 	if !ok {
 		return
@@ -71,6 +77,8 @@ func (p *Pubsub) PSubscribe(pattern string, c chan interface{}) {
 	if c == nil {
 		return
 	}
+	p.locker.Lock()
+	defer p.locker.Unlock()
 	chans, ok := p.patterns[pattern]
 	if !ok {
 		chans = []chan interface{}{c}
@@ -90,6 +98,8 @@ func (p *Pubsub) PUnsubscribe(pattern string, c chan interface{}) {
 	if c == nil {
 		return
 	}
+	p.locker.Lock()
+	defer p.locker.Unlock()
 	chans, ok := p.patterns[pattern]
 	if !ok {
 		return
@@ -109,6 +119,8 @@ func (p *Pubsub) PUnsubscribe(pattern string, c chan interface{}) {
 // Publish a message with specifid name. Publish won't be blocked by channel receiving,
 // if a channel doesn't ready when publish, it will be ignored.
 func (p *Pubsub) Publish(name string, message interface{}) {
+	p.locker.RLock()
+	defer p.locker.RUnlock()
 	if chans, ok := p.channels[name]; ok {
 		for _, c := range chans {
 			select {
