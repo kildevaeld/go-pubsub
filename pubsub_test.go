@@ -185,3 +185,42 @@ func TestPubsubMax(t *testing.T) {
 	c = make(chan interface{})
 	assert.Equal(t, p.PSubscribe("name", c), nil)
 }
+
+func TestPubsubUnsubscribe(t *testing.T) {
+	p := New(2)
+	c := make(chan interface{})
+	p.Subscribe("name", c)
+	p.PSubscribe("name", c)
+	c = make(chan interface{})
+	p.Subscribe("name", c)
+	p.PSubscribe("name", c)
+
+	assert.Equal(t, len(p.channels), 1)
+	assert.Equal(t, len(p.patterns), 1)
+	assert.Equal(t, len(p.channels["name"]), 2)
+	assert.Equal(t, len(p.patterns["name"]), 2)
+
+	p.Unsubscribe("name", nil)
+	p.PUnsubscribe("name", nil)
+
+	assert.Equal(t, len(p.channels), 1)
+	assert.Equal(t, len(p.patterns), 1)
+	assert.Equal(t, len(p.channels["name"]), 2)
+	assert.Equal(t, len(p.patterns["name"]), 2)
+
+	p.Unsubscribe("n", c)
+	p.PUnsubscribe("n", c)
+
+	assert.Equal(t, len(p.channels), 1)
+	assert.Equal(t, len(p.patterns), 1)
+	assert.Equal(t, len(p.channels["name"]), 2)
+	assert.Equal(t, len(p.patterns["name"]), 2)
+
+	p.Unsubscribe("name", c)
+	p.PUnsubscribe("name", c)
+
+	assert.Equal(t, len(p.channels), 1)
+	assert.Equal(t, len(p.patterns), 1)
+	assert.Equal(t, len(p.channels["name"]), 1)
+	assert.Equal(t, len(p.patterns["name"]), 1)
+}
