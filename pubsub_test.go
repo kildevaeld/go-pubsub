@@ -8,7 +8,7 @@ import (
 
 func TestPubsubNoblock(t *testing.T) {
 	c := make(chan interface{})
-	ps := New()
+	ps := New(-1)
 	ps.Subscribe("nonblock", c)
 	quit := make(chan int)
 	go func() {
@@ -26,7 +26,7 @@ func TestPubsubNoblock(t *testing.T) {
 func TestUnsub(t *testing.T) {
 	c1 := make(chan interface{})
 	c2 := make(chan interface{})
-	ps := New()
+	ps := New(-1)
 
 	assert.Equal(t, len(ps.channels), 0)
 	ps.Subscribe("sub", nil)
@@ -74,7 +74,7 @@ func TestUnsub(t *testing.T) {
 func TestPubsub(t *testing.T) {
 	quit := make(chan int)
 	count := 0
-	ps := New()
+	ps := New(-1)
 
 	abc := make(chan interface{}, 1)
 	go func() {
@@ -130,4 +130,58 @@ func TestPubsub(t *testing.T) {
 	for i := 0; i < count; i++ {
 		<-quit
 	}
+}
+
+func TestPubsubMax(t *testing.T) {
+	p := New(2)
+	c := make(chan interface{})
+	assert.Equal(t, p.Subscribe("name", c), nil)
+	assert.Equal(t, p.Subscribe("name", c), nil)
+	c = make(chan interface{})
+	assert.Equal(t, p.Subscribe("name", c), nil)
+	c = make(chan interface{})
+	assert.Equal(t, p.Subscribe("name", c), ErrMaxSubscribe)
+	c = make(chan interface{})
+	assert.Equal(t, p.PSubscribe("name", c), nil)
+	assert.Equal(t, p.PSubscribe("name", c), nil)
+	c = make(chan interface{})
+	assert.Equal(t, p.PSubscribe("name", c), nil)
+	c = make(chan interface{})
+	assert.Equal(t, p.PSubscribe("name", c), ErrMaxSubscribe)
+
+	p = New(1)
+	c = make(chan interface{})
+	assert.Equal(t, p.Subscribe("name", c), nil)
+	assert.Equal(t, p.Subscribe("name", c), nil)
+	c = make(chan interface{})
+	assert.Equal(t, p.Subscribe("name", c), ErrMaxSubscribe)
+	c = make(chan interface{})
+	assert.Equal(t, p.PSubscribe("name", c), nil)
+	assert.Equal(t, p.PSubscribe("name", c), nil)
+	c = make(chan interface{})
+	assert.Equal(t, p.PSubscribe("name", c), ErrMaxSubscribe)
+
+	p = New(0)
+	c = make(chan interface{})
+	assert.Equal(t, p.Subscribe("name", c), nil)
+	assert.Equal(t, p.Subscribe("name", c), nil)
+	c = make(chan interface{})
+	assert.Equal(t, p.Subscribe("name", c), nil)
+	c = make(chan interface{})
+	assert.Equal(t, p.PSubscribe("name", c), nil)
+	assert.Equal(t, p.PSubscribe("name", c), nil)
+	c = make(chan interface{})
+	assert.Equal(t, p.PSubscribe("name", c), nil)
+
+	p = New(-1)
+	c = make(chan interface{})
+	assert.Equal(t, p.Subscribe("name", c), nil)
+	assert.Equal(t, p.Subscribe("name", c), nil)
+	c = make(chan interface{})
+	assert.Equal(t, p.Subscribe("name", c), nil)
+	c = make(chan interface{})
+	assert.Equal(t, p.PSubscribe("name", c), nil)
+	assert.Equal(t, p.PSubscribe("name", c), nil)
+	c = make(chan interface{})
+	assert.Equal(t, p.PSubscribe("name", c), nil)
 }

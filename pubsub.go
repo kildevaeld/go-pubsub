@@ -4,29 +4,34 @@
 package pubsub
 
 import (
+	"errors"
 	"path/filepath"
 	"sync"
 )
 
+var ErrMaxSubscribe = errors.New("subscription is maximum.")
+
 // Pubsub implement the Publish/Subscribe messaging paradigm.
 type Pubsub struct {
 	locker   sync.RWMutex
+	max      int
 	channels map[string][]chan interface{}
 	patterns map[string][]chan interface{}
 }
 
-// Create a Pubsub.
-func New() *Pubsub {
+// Create a Pubsub. The same name or pattern can only have max subscription. No limit if max <= 0.
+func New(max int) *Pubsub {
 	return &Pubsub{
+		max:      max,
 		channels: make(map[string][]chan interface{}),
 		patterns: make(map[string][]chan interface{}),
 	}
 }
 
 // Subscribe the message with specified name and send to channel c.
-func (p *Pubsub) Subscribe(name string, c chan interface{}) {
+func (p *Pubsub) Subscribe(name string, c chan interface{}) error {
 	if c == nil {
-		return
+		return nil
 	}
 	p.locker.Lock()
 	defer p.locker.Unlock()
@@ -36,12 +41,15 @@ func (p *Pubsub) Subscribe(name string, c chan interface{}) {
 	} else {
 		for _, ch := range chans {
 			if ch == c {
-				return
+				return nil
 			}
 		}
-		chans = append(chans, c)
+		if !p.appendChans(&chans, c) {
+			return ErrMaxSubscribe
+		}
 	}
 	p.channels[name] = chans
+	return nil
 }
 
 // Unsubscribe the channel c with specified name.
@@ -73,9 +81,9 @@ func (p *Pubsub) Unsubscribe(name string, c chan interface{}) {
 //  - h?llo matches hello, hallo and hxllo
 //  - h*llo matches hllo and heeeello
 //  - h[ae]llo matches hello and hallo, but not hillo
-func (p *Pubsub) PSubscribe(pattern string, c chan interface{}) {
+func (p *Pubsub) PSubscribe(pattern string, c chan interface{}) error {
 	if c == nil {
-		return
+		return nil
 	}
 	p.locker.Lock()
 	defer p.locker.Unlock()
@@ -85,12 +93,15 @@ func (p *Pubsub) PSubscribe(pattern string, c chan interface{}) {
 	} else {
 		for _, ch := range chans {
 			if ch == c {
-				return
+				return nil
 			}
 		}
-		chans = append(chans, c)
+		if !p.appendChans(&chans, c) {
+			return ErrMaxSubscribe
+		}
 	}
 	p.patterns[pattern] = chans
+	return nil
 }
 
 // Unsubscribes the channel c with the specified pattern.
@@ -139,4 +150,12 @@ func (p *Pubsub) Publish(name string, message interface{}) {
 			}
 		}
 	}
+}
+
+func (p *Pubsub) appendChans(chans *[]chan interface{}, c chan interface{}) bool {
+	if p.max > 0 && len(*chans) >= p.max {
+		return false
+	}
+	*chans = append(*chans, c)
+	return true
 }
