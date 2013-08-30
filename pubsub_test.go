@@ -85,16 +85,16 @@ func TestPubsub(t *testing.T) {
 	count++
 	ps.Subscribe("abc", abc)
 
-	ab_any := make(chan interface{}, 2)
+	abAny := make(chan interface{}, 2)
 	go func() {
-		i := <-ab_any
+		i := <-abAny
 		assert.Equal(t, i, "abc")
-		i = <-ab_any
+		i = <-abAny
 		assert.Equal(t, i, "abd")
 		quit <- 1
 	}()
 	count++
-	ps.PSubscribe("ab*", ab_any)
+	ps.PSubscribe("ab*", abAny)
 
 	cde := make(chan interface{}, 1)
 	go func() {
@@ -105,23 +105,23 @@ func TestPubsub(t *testing.T) {
 	count++
 	ps.Subscribe("cde", cde)
 
-	cd_any1 := make(chan interface{}, 2)
+	cdAny1 := make(chan interface{}, 2)
 	go func() {
-		i := <-cd_any1
+		i := <-cdAny1
 		assert.Equal(t, i, "cde")
 		quit <- 1
 	}()
 	count++
-	ps.PSubscribe("cd?", cd_any1)
+	ps.PSubscribe("cd?", cdAny1)
 
-	cd_any2 := make(chan interface{}, 2)
+	cdAny2 := make(chan interface{}, 2)
 	go func() {
-		i := <-cd_any2
+		i := <-cdAny2
 		assert.Equal(t, i, "cde")
 		quit <- 1
 	}()
 	count++
-	ps.PSubscribe("cd[e]", cd_any2)
+	ps.PSubscribe("cd[e]", cdAny2)
 
 	ps.Publish("abc", "abc")
 	ps.Publish("abd", "abd")

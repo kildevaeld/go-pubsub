@@ -9,7 +9,8 @@ import (
 	"sync"
 )
 
-var ErrMaxSubscribe = errors.New("subscription is maximum.")
+// Error of meeting max subscribe number.
+var ErrMaxSubscribe = errors.New("subscription is maximum")
 
 // Pubsub implement the Publish/Subscribe messaging paradigm.
 type Pubsub struct {
@@ -19,7 +20,7 @@ type Pubsub struct {
 	patterns map[string][]chan interface{}
 }
 
-// Create a Pubsub. The same name or pattern can only have max subscription. No limit if max <= 0.
+// New return a new Pubsub. The same name or pattern can only have max subscription. No limit if max <= 0.
 func New(max int) *Pubsub {
 	return &Pubsub{
 		max:      max,
@@ -75,7 +76,7 @@ func (p *Pubsub) Unsubscribe(name string, c chan interface{}) {
 	}
 }
 
-// Subscribes the message with the specified pattern and send to channel c.
+// PSubscribe subscribe the message with the specified pattern and send to channel c.
 // Pattern supported glob-style patterns:
 //
 //  - h?llo matches hello, hallo and hxllo
@@ -104,7 +105,7 @@ func (p *Pubsub) PSubscribe(pattern string, c chan interface{}) error {
 	return nil
 }
 
-// Unsubscribes the channel c with the specified pattern.
+// PUnsubscribe unsubscribes the channel c with the specified pattern.
 func (p *Pubsub) PUnsubscribe(pattern string, c chan interface{}) {
 	if c == nil {
 		return
