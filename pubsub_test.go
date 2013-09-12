@@ -61,6 +61,7 @@ func TestUnsub(t *testing.T) {
 	assert.Equal(t, len(ps.patterns["sub*"]), 2)
 
 	ps.PUnsubscribe("sub*", c1)
+	ps.PUnsubscribe("sub*", c1)
 	assert.Equal(t, len(ps.patterns["sub*"]), 1)
 	ps.PSubscribe("sub1*", c1)
 	assert.Equal(t, len(ps.patterns["sub*"]), 1)
@@ -223,6 +224,14 @@ func TestPubsubUnsubscribe(t *testing.T) {
 	assert.Equal(t, len(p.patterns), 1)
 	assert.Equal(t, len(p.channels["name"]), 1)
 	assert.Equal(t, len(p.patterns["name"]), 1)
+
+	p.Unsubscribe("name", c)
+	p.PUnsubscribe("name", c)
+
+	assert.Equal(t, len(p.channels), 1)
+	assert.Equal(t, len(p.patterns), 1)
+	assert.Equal(t, len(p.channels["name"]), 1)
+	assert.Equal(t, len(p.patterns["name"]), 1)
 }
 
 func TestPubsubUnsubscribeAll(t *testing.T) {
@@ -234,7 +243,16 @@ func TestPubsubUnsubscribeAll(t *testing.T) {
 	p.Subscribe("name", d)
 	p.PSubscribe("name", d)
 
+	p.UnsubscribeAll(nil)
+	assert.Equal(t, len(p.channels), 1)
+	assert.Equal(t, len(p.patterns), 1)
+	assert.Equal(t, len(p.channels["name"]), 2)
+	assert.Equal(t, len(p.patterns["name"]), 2)
 	p.UnsubscribeAll(c)
+	assert.Equal(t, len(p.channels), 1)
+	assert.Equal(t, len(p.patterns), 1)
+	assert.Equal(t, len(p.channels["name"]), 1)
+	assert.Equal(t, len(p.patterns["name"]), 1)
 	p.UnsubscribeAll(d)
 	assert.Equal(t, len(p.channels), 0)
 	assert.Equal(t, len(p.patterns), 0)
