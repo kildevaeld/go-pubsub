@@ -224,3 +224,18 @@ func TestPubsubUnsubscribe(t *testing.T) {
 	assert.Equal(t, len(p.channels["name"]), 1)
 	assert.Equal(t, len(p.patterns["name"]), 1)
 }
+
+func TestPubsubUnsubscribeAll(t *testing.T) {
+	p := New(2)
+	c := make(chan interface{})
+	p.Subscribe("name", c)
+	p.PSubscribe("name", c)
+	d := make(chan interface{})
+	p.Subscribe("name", d)
+	p.PSubscribe("name", d)
+
+	p.UnsubscribeAll(c)
+	p.UnsubscribeAll(d)
+	assert.Equal(t, len(p.channels), 0)
+	assert.Equal(t, len(p.patterns), 0)
+}
