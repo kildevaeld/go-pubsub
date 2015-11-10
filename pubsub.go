@@ -12,25 +12,30 @@ import (
 // Error of meeting max subscribe number.
 var ErrMaxSubscribe = errors.New("subscription is maximum")
 
+type Event struct {
+	Name    string
+	Message interface{}
+}
+
 // Pubsub implement the Publish/Subscribe messaging paradigm.
 type Pubsub struct {
 	locker   sync.RWMutex
 	max      int
-	channels map[string][]chan interface{}
-	patterns map[string][]chan interface{}
+	channels map[string][]chan Event
+	patterns map[string][]chan Event
 }
 
 // New return a new Pubsub. The same name or pattern can only have max subscription. No limit if max <= 0.
 func New(max int) *Pubsub {
 	return &Pubsub{
 		max:      max,
-		channels: make(map[string][]chan interface{}),
-		patterns: make(map[string][]chan interface{}),
+		channels: make(map[string][]chan Event),
+		patterns: make(map[string][]chan Event),
 	}
 }
 
 // Subscribe the message with specified name and send to channel c.
-func (p *Pubsub) Subscribe(name string, c chan interface{}) error {
+func (p *Pubsub) Subscribe(name string, c chan Event) error {
 	if c == nil {
 		return nil
 	}
@@ -45,7 +50,7 @@ func (p *Pubsub) Subscribe(name string, c chan interface{}) error {
 }
 
 // Unsubscribe the channel c with specified name.
-func (p *Pubsub) Unsubscribe(name string, c chan interface{}) {
+func (p *Pubsub) Unsubscribe(name string, c chan Event) {
 	if c == nil {
 		return
 	}
@@ -70,7 +75,7 @@ func (p *Pubsub) Unsubscribe(name string, c chan interface{}) {
 //  - h?llo matches hello, hallo and hxllo
 //  - h*llo matches hllo and heeeello
 //  - h[ae]llo matches hello and hallo, but not hillo
-func (p *Pubsub) PSubscribe(pattern string, c chan interface{}) error {
+func (p *Pubsub) PSubscribe(pattern string, c chan Event) error {
 	if c == nil {
 		return nil
 	}
@@ -85,7 +90,7 @@ func (p *Pubsub) PSubscribe(pattern string, c chan interface{}) error {
 }
 
 // PUnsubscribe unsubscribes the channel c with the specified pattern.
-func (p *Pubsub) PUnsubscribe(pattern string, c chan interface{}) {
+func (p *Pubsub) PUnsubscribe(pattern string, c chan Event) {
 	if c == nil {
 		return
 	}
@@ -109,10 +114,14 @@ func (p *Pubsub) PUnsubscribe(pattern string, c chan interface{}) {
 func (p *Pubsub) Publish(name string, message interface{}) {
 	p.locker.RLock()
 	defer p.locker.RUnlock()
+	event := Event{
+		Name:    name,
+		Message: message,
+	}
 	if chans, ok := p.channels[name]; ok {
 		for _, c := range chans {
 			select {
-			case c <- message:
+			case c <- event:
 			default:
 			}
 		}
@@ -121,7 +130,7 @@ func (p *Pubsub) Publish(name string, message interface{}) {
 		if ok, err := filepath.Match(pattern, name); err == nil && ok {
 			for _, c := range chans {
 				select {
-				case c <- message:
+				case c <- event:
 				default:
 				}
 			}
@@ -130,7 +139,7 @@ func (p *Pubsub) Publish(name string, message interface{}) {
 }
 
 // UnsubscribeAll unsubscribe channel c from all subscription & pattern subscription.
-func (p *Pubsub) UnsubscribeAll(c chan interface{}) {
+func (p *Pubsub) UnsubscribeAll(c chan Event) {
 	if c == nil {
 		return
 	}
@@ -142,7 +151,7 @@ func (p *Pubsub) UnsubscribeAll(c chan interface{}) {
 		name  string
 		index int
 	}
-	for _, collection := range []map[string][]chan interface{}{p.channels, p.patterns} {
+	for _, collection := range []map[string][]chan Event{p.channels, p.patterns} {
 		var finds []Find
 		for name, chans := range collection {
 			if i := p.findChan(chans, c); i >= 0 {
@@ -155,10 +164,10 @@ func (p *Pubsub) UnsubscribeAll(c chan interface{}) {
 	}
 }
 
-func (p *Pubsub) subscribe(collection map[string][]chan interface{}, name string, c chan interface{}) bool {
+func (p *Pubsub) subscribe(collection map[string][]chan Event, name string, c chan Event) bool {
 	chans, ok := collection[name]
 	if !ok {
-		chans = []chan interface{}{c}
+		chans = []chan Event{c}
 	} else {
 		if p.findChan(chans, c) >= 0 {
 			return true
@@ -172,7 +181,7 @@ func (p *Pubsub) subscribe(collection map[string][]chan interface{}, name string
 	return true
 }
 
-func (p *Pubsub) unsubscribe(collection map[string][]chan interface{}, name string, i int) {
+func (p *Pubsub) unsubscribe(collection map[string][]chan Event, name string, i int) {
 	chans := collection[name]
 	chans = append(chans[:i], chans[i+1:]...)
 	if len(chans) == 0 {
@@ -182,7 +191,7 @@ func (p *Pubsub) unsubscribe(collection map[string][]chan interface{}, name stri
 	}
 }
 
-func (p *Pubsub) findChan(chans []chan interface{}, c chan interface{}) int {
+func (p *Pubsub) findChan(chans []chan Event, c chan Event) int {
 	for i, ch := range chans {
 		if ch == c {
 			return i
